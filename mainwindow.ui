@@ -45,7 +45,7 @@
         <item>
          <widget class="QPushButton" name="pbtnStartPath">
           <property name="text">
-           <string>Выбрать путь</string>
+           <string>Выбрать каталог</string>
           </property>
          </widget>
         </item>
@@ -73,7 +73,7 @@
         <item>
          <widget class="QPushButton" name="pbtnFinishPath">
           <property name="text">
-           <string>Выбрать путь</string>
+           <string>Выбрать каталог</string>
           </property>
          </widget>
         </item>
@@ -145,6 +145,9 @@
            <layout class="QHBoxLayout" name="hLayoutBtnsOneThread">
             <item>
              <widget class="QPushButton" name="pbtnFinish">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
                <string>Прервать сортировку</string>
               </property>
@@ -152,6 +155,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="pbtnStop">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
                <string>Остановить</string>
               </property>
@@ -218,7 +224,7 @@
              </widget>
             </item>
             <item>
-             <widget class="QSpinBox" name="spinBox">
+             <widget class="QSpinBox" name="spCntManyThreads">
               <property name="minimum">
                <number>2</number>
               </property>
@@ -246,6 +252,9 @@
            <layout class="QHBoxLayout" name="hLayoutBtnsManyThreads">
             <item>
              <widget class="QPushButton" name="pbtnFinishThreads">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
                <string>Прервать сортировку</string>
               </property>
@@ -253,6 +262,9 @@
             </item>
             <item>
              <widget class="QPushButton" name="pbtnStopThreads">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
               <property name="text">
                <string>Остановить</string>
               </property>

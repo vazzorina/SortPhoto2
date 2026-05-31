@@ -11,12 +11,28 @@ qt_add_executable(SortPhoto2
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    sortingfiles.h sortingfiles.cpp
+)
+
+target_include_directories(SortPhoto2 PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/exiv2-mingw/include
+)
+
+target_link_directories(SortPhoto2 PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/lib/exiv2-mingw/lib
 )
 
 target_link_libraries(SortPhoto2
     PRIVATE
         Qt::Core
         Qt::Widgets
+        exiv2
+)
+
+add_custom_command(TARGET SortPhoto2 POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    "${CMAKE_CURRENT_SOURCE_DIR}/lib/exiv2-mingw/lib"
+    $<TARGET_FILE_DIR:SortPhoto2>
 )
 
 include(GNUInstallDirs)

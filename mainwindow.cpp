@@ -78,15 +78,25 @@ void MainWindow::on_pbtnStop_clicked()
 
 void MainWindow::on_pbtnStart_clicked()
 {
-    ui->pbtnStartThreads->setEnabled(false);
-    ui->pbtnFinishThreads->setEnabled(false);
-    ui->pbtnStopThreads->setEnabled(false);
+    if (startPath.isEmpty() and finishPath.isEmpty()) QMessageBox::warning(this, "Ошикба!", "Не указаны пути каталогов!");
+    else {
+        ui->pbtnStartThreads->setEnabled(false);
+        ui->pbtnFinishThreads->setEnabled(false);
+        ui->pbtnStopThreads->setEnabled(false);
 
-    ui->pbtnStart->setEnabled(false);
-    ui->pbtnFinish->setEnabled(true);
-    ui->pbtnStop->setEnabled(true);
+        ui->pbtnStart->setEnabled(false);
+        ui->pbtnFinish->setEnabled(true);
+        ui->pbtnStop->setEnabled(true);
 
-    // здесь будет функция запуска потока
+        sortingFiles = new SortingFiles();
+
+        connect(sortingFiles, &SortingFiles::logMessage, ui->teOneThread, &QTextEdit::append);
+        connect(sortingFiles, &SortingFiles::progressChanged, ui->pBarOneThread, &QProgressBar::setValue);
+        connect(sortingFiles, &SortingFiles::maxProgressChanged, ui->pBarOneThread, &QProgressBar::setMaximum);
+
+        sortingFiles->sortFiles(startPath, finishPath);
+        // здесь будет функция запуска потока
+    }
 }
 
 
