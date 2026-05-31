@@ -5,6 +5,7 @@
 #include <QStandardPaths>
 #include <QThread>
 #include <QTimer>
+#include <thread>
 
 
 MainWindow::MainWindow(QWidget *parent)
@@ -12,6 +13,9 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
+    int maxThreads = std::thread::hardware_concurrency() > 1 ? std::thread::hardware_concurrency() - 1 : 1; // вычисляем максимальное количество потоков с учетом текущего
+    ui->spCntManyThreads->setMaximum(maxThreads);
+
 }
 
 MainWindow::~MainWindow()
@@ -94,8 +98,20 @@ void MainWindow::on_pbtnStart_clicked()
         connect(sortingFiles, &SortingFiles::progressChanged, ui->pBarOneThread, &QProgressBar::setValue);
         connect(sortingFiles, &SortingFiles::maxProgressChanged, ui->pBarOneThread, &QProgressBar::setMaximum);
 
-        sortingFiles->sortFiles(startPath, finishPath);
-        // здесь будет функция запуска потока
+        sortingFiles->writeTotalFilesPath(startPath);
+        sortingFiles->elapsedTime = 0;
+        //sortingFiles->sortFiles(finishPath, 0, sortingFiles->totalFiles, 1);
+
+        //sortingFiles->sortFiles(startPath, finishPath);
+        std::thread t(&SortingFiles::sortFiles, sortingFiles, finishPath, 0, sortingFiles->totalFiles, 1);
+        t.detach();
+
+        cnt = 0;
+
+        connect(sortingFiles, &SortingFiles::finished, this, [=]() {
+            cnt++;
+            if (cnt == 1) ui->teOneThread->append("RESULT: Время сортировки равно: " + QString::number(sortingFiles->elapsedTime));
+        });
     }
 }
 
@@ -120,13 +136,42 @@ void MainWindow::on_pbtnStopThreads_clicked()
 
 void MainWindow::on_pbtnStartThreads_clicked()
 {
-    ui->pbtnStart->setEnabled(false);
-    ui->pbtnFinish->setEnabled(false);
-    ui->pbtnStop->setEnabled(false);
+    if (startPath.isEmpty() and finishPath.isEmpty()) QMessageBox::warning(this, "Ошикба!", "Не указаны пути каталогов!");
+    else {
+        ui->pbtnStart->setEnabled(false);
+        ui->pbtnFinish->setEnabled(false);
+        ui->pbtnStop->setEnabled(false);
 
-    ui->pbtnStartThreads->setEnabled(false);
-    ui->pbtnFinishThreads->setEnabled(true);
-    ui->pbtnStopThreads->setEnabled(true);
+        ui->pbtnStartThreads->setEnabled(false);
+        ui->pbtnFinishThreads->setEnabled(true);
+        ui->pbtnStopThreads->setEnabled(true);
+
+        sortingFiles = new SortingFiles();
+
+        connect(sortingFiles, &SortingFiles::logMessage, ui->teManyThreads, &QTextEdit::append);
+        connect(sortingFiles, &SortingFiles::progressChanged, ui->pBarManyThreads, &QProgressBar::setValue);
+        connect(sortingFiles, &SortingFiles::maxProgressChanged, ui->pBarManyThreads, &QProgressBar::setMaximum);
+
+        sortingFiles->writeTotalFilesPath(startPath);
+        sortingFiles->elapsedTime = 0;
+
+        long sizeBlock = sortingFiles->totalFiles/cntThreads + 1;
+        std::vector<std::thread> allThreads(cntThreads);
+        long startIndex = 0, endIndex = sizeBlock;
+        for (int i = 1; i <= cntThreads; i++) {
+            if(endIndex >= sortingFiles->totalFiles) endIndex = sortingFiles->totalFiles;
+            allThreads[i-1] = std::thread(&SortingFiles::sortFiles, sortingFiles, finishPath, startIndex, endIndex, i);
+            allThreads[i-1].detach();
+            startIndex = endIndex;
+            endIndex += sizeBlock;
+        }
+        cnt = 0;
+        connect(sortingFiles, &SortingFiles::finished, this, [=]() {
+            cnt++;
+            if (cnt == cntThreads) ui->teManyThreads->append("RESULT: Время сортировки равно: " + QString::number(sortingFiles->elapsedTime));
+        });
+
+    }
 
     // здесб будет функция запсуков потоков
 }

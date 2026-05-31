@@ -2,35 +2,52 @@
 #include <QDirIterator>
 #include <QDir>
 #include <exiv2/exiv2.hpp>
+#include <QElapsedTimer>
 
 SortingFiles::SortingFiles(QObject *parent)
     : QObject{parent}
 {}
 
-void SortingFiles::sortFiles(QString inputPath, QString outputPath) {
-    int maxFiles = 0;
-    QStringList formatsFiles = {"*.jpeg", "*.jpg", "*.png", "*.gif", "*.webp", "*.heic", "*.tiff", "*.mp4", "*.mov", "*.avi", "*.mkv", "*.webm", "*.wmv", "*.flv"};
+void SortingFiles::writeTotalFilesPath(QString inputPath) {
+    totalFiles = 0;
+    QStringList formatsFiles = {"*.jpeg", "*.jpg", "*.png"}; // "*.gif", "*.webp", "*.heic", "*.tiff", "*.mp4", "*.mov", "*.avi", "*.mkv", "*.webm", "*.wmv", "*.flv"
     QDirIterator count_it(inputPath, formatsFiles, QDir::Files, QDirIterator::Subdirectories);
     while (count_it.hasNext()) {
         count_it.next();
-        maxFiles++;
+        totalFiles++;
     }
 
-    emit maxProgressChanged(maxFiles);
-    emit logMessage("INFO: В папке \"" + inputPath + "\" находится: " + QString::number(maxFiles) + " файлов");
-    emit logMessage("START: Запущена сортировка файлов по пути: " +  inputPath);
+    emit maxProgressChanged(totalFiles);
+    emit logMessage("INFO: В папке \"" + inputPath + "\" находится файлов: " + QString::number(totalFiles));
+
+    totalFilesPath.reserve(totalFiles);
 
     QDirIterator inputCatalog(inputPath, formatsFiles, QDir::Files, QDirIterator::Subdirectories);
+    while (inputCatalog.hasNext()) {
+        QString itemPath = inputCatalog.next();
+        emit logMessage("INFO: В список всех путей добавлен: " + itemPath);
+        totalFilesPath.append(itemPath);
+    }
+
+}
+
+void SortingFiles::sortFiles(QString outputPath, long indexStart, long indexEnd, int numThread) {
+    QElapsedTimer timer;
+    timer.start();
+    emit logMessage("START: Запущена сортировка файлов в потоке: " + QString::number(numThread));
+
     QDir outputCatalog;
     std::set<QString> dateDirs; // хранение годов, для которых уже созданы каталоги
-    QString itemPath, itemOutputPath, year;
+    QString itemPath, itemOutputPath, year, suff;
     QDateTime date;
-    int currentProgress = 0;
-    while (inputCatalog.hasNext()) {
-        itemPath = inputCatalog.next();
+    currentProgress = 0;
+
+    for (long i = indexStart; i < indexEnd; i++) {
+        itemPath = totalFilesPath[i];
+        suff = QFileInfo(itemPath).suffix();
         date = getDateFile(itemPath);
         year = QString::number(date.date().year());
-        itemOutputPath = outputPath + "/" + year + "/" + date.toString("dd.MM.yyyy HH-mm-ss") + "." + inputCatalog.fileInfo().suffix();
+        itemOutputPath = outputPath + "/" + year + "/" + date.toString("dd.MM.yyyy HH-mm-ss") + "." + suff;
 
         if (!date.isNull() and !dateDirs.count(year)) {
             dateDirs.insert(year);
@@ -41,7 +58,7 @@ void SortingFiles::sortFiles(QString inputPath, QString outputPath) {
         int cnt = 1;
         while (QFile::exists(itemOutputPath)) {
             itemOutputPath = outputPath + "/" + year + "/" + date.toString("dd.MM.yyyy HH-mm-ss") +
-                             " (" + QString::number(cnt)+ ")" + "." + inputCatalog.fileInfo().suffix();
+                             " (" + QString::number(cnt)+ ")" + "." + suff;
             cnt++;
             if (cnt == 100) break;
             emit logMessage("WARN: Ошибка при копировании (возможно дубликат): " + itemOutputPath);
@@ -53,8 +70,9 @@ void SortingFiles::sortFiles(QString inputPath, QString outputPath) {
         emit progressChanged(currentProgress);
     }
 
-    emit logMessage("FINISH: Сортировка файлов окончена");
+    emit logMessage("FINISH: Сортировка файлов окончена в потоке: " + QString::number(numThread));
     emit finished();
+    elapsedTime += timer.elapsed();
 }
 
 QDateTime SortingFiles::getDateFile(QString itemPath) {
@@ -79,6 +97,7 @@ QDateTime SortingFiles::getDateFile(QString itemPath) {
         return QDateTime::fromString(QString::fromStdString(dateStr), "yyyy:MM:dd HH:mm:ss");
 
     } catch (Exiv2::Error& e) {
+        emit logMessage("ERROR: Не удалось прочитать дату файла: " + itemPath);
         // При ошибке чтения файла возвращаем дату с нулевыми данными, чтобы вызывающий код сохранил файл в отдельной папке
         return QDateTime(QDate(1, 1, 1), QTime(0, 0, 0));
     }

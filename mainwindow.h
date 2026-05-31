@@ -34,6 +34,7 @@ private:
     QString startPath = "";
     QString finishPath = "";
     int cntThreads = 0;
+    int cnt = 0;
     SortingFiles *sortingFiles = nullptr;
     void getPath();
 

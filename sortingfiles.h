@@ -2,15 +2,21 @@
 #define SORTINGFILES_H
 
 #include <QObject>
+#include <atomic>
 
 class SortingFiles : public QObject
 {
     Q_OBJECT
 public:
     explicit SortingFiles(QObject *parent = nullptr);
+    long totalFiles = 0;
+    QStringList totalFilesPath; // список путей всех файлов из исходного католога
+    std::atomic<long> currentProgress = 0; // атомарная переменная, которую можно изменять сразу из нескольких потоков
+    std::atomic<qint64> elapsedTime;
 
 public slots:
-    void sortFiles(QString inputPath, QString outputPath);
+    void sortFiles(QString outputPath, long indexStart, long indexEnd, int numThread);
+    void writeTotalFilesPath(QString inputPath);
 
 signals:
     void progressChanged(int value); // сигнал для смены значения progressBar
